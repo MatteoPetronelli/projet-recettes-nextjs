@@ -6,6 +6,7 @@ export interface User {
   email: string;
   passwordHash: string;
   name: string;
+  favorites: string[];
 }
 
 const dbPath = path.join(__dirname, 'data', 'users.json');

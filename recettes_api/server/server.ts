@@ -63,7 +63,8 @@ app.post('/api/auth/register', async (req: Request, res: Response) => {
     id: randomUUID(),
     email,
     passwordHash: hashedPassword,
-    name
+    name,
+    favorites: []
   };
 
   const users = await getUsersFromFile();
@@ -96,7 +97,7 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
 
   res.json({ 
     token, 
-    user: { id: user.id, name: user.name, email: user.email } 
+    user: { id: user.id, name: user.name, email: user.email, favorites: user.favorites || [] } 
   });
 });
 
@@ -115,7 +116,6 @@ app.get('/api/recettes', async (req: AuthRequest, res: Response) => {
 
   const cachedData = cache.get(cacheKey);
   if (cachedData) {
-    console.log("⚡️ Réponse depuis le cache");
     return res.json(cachedData);
   }
 
@@ -248,6 +248,39 @@ app.delete('/api/recettes/:id', requireAuth, async (req: AuthRequest, res: Respo
   await saveRecipesToFile(recipes);
 
   res.json({ message: "Supprimé avec succès" });
+});
+
+app.post('/api/recettes/:id/favorite', requireAuth, async (req: AuthRequest, res: Response) => {
+  const recipeId = req.params.id;
+  const userId = req.user!.id;
+
+  try {
+    const users = await getUsersFromFile();
+    const userIndex = users.findIndex(u => u.id === userId);
+
+    if (userIndex === -1) {
+      res.status(404).json({ message: "Utilisateur non trouvé" });
+      return;
+    }
+
+    const user = users[userIndex];
+    if (!user.favorites) user.favorites = [];
+
+    const favIndex = user.favorites.indexOf(recipeId);
+
+    if (favIndex === -1) {
+      user.favorites.push(recipeId);
+    } else {
+      user.favorites.splice(favIndex, 1);
+    }
+
+    users[userIndex] = user;
+    await saveUsersToFile(users);
+
+    res.json({ favorites: user.favorites });
+  } catch (error) {
+    res.status(500).json({ message: "Erreur serveur" });
+  }
 });
 
 app.listen(PORT, () => {
