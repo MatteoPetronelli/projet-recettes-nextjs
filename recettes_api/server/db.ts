@@ -1,8 +1,17 @@
 import fs from 'fs/promises';
 import path from 'path';
 
+export interface Review {
+  userId: string;
+  userName: string;
+  rating: number;
+  comment: string;
+  createdAt: string;
+}
+
 export interface Recipe {
   id: string;
+  reviews: Review[];
   name: string;
   imageUrl: string;
   country: string;

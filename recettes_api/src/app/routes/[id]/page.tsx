@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Recipe } from "@/types/recipe";
 import RecipeImage from "@/components/RecipeImage";
 import DeleteButton from "@/components/DeleteButton";
+import ReviewsSection from "@/components/ReviewsSection";
 
 async function getRecipe(id: string): Promise<Recipe | null> {
   const res = await fetch(`http://127.0.0.1:4000/api/recettes/${id}`, { cache: 'no-store' });
@@ -172,7 +173,7 @@ export default function RecipePage() {
               </div>
             </div>
           </div>
-
+          <ReviewsSection recipeId={recipe.id} initialReviews={recipe.reviews} visibility={recipe.visibility}/>
         </div>
       </div>
     </main>

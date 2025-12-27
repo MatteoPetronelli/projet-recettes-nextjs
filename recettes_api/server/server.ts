@@ -3,7 +3,7 @@ dotenv.config();
 
 import express, { Request, Response } from 'express';
 import cors from 'cors';
-import { getRecipesFromFile, saveRecipesToFile, Recipe } from './db';
+import { getRecipesFromFile, saveRecipesToFile, Recipe, Review } from './db';
 import { randomUUID } from 'node:crypto';
 import { ZodError } from 'zod';
 import { RecipeSchema } from './schemas/recipe.schema';
@@ -190,8 +190,6 @@ app.post('/api/recettes', validateRecipe, requireAuth, async (req: AuthRequest, 
 });
 
 app.put('/api/recettes/:id', validateRecipe, requireAuth, async (req: AuthRequest, res: Response) => {
-  cache.flushAll();
-
   const { id } = req.params;
   const userId = req.user!.id;
   
@@ -199,26 +197,37 @@ app.put('/api/recettes/:id', validateRecipe, requireAuth, async (req: AuthReques
     const recipes = await getRecipesFromFile();
     const index = recipes.findIndex((r) => r.id === id);
 
-    if (index === -1) {
-      res.status(404).json({ message: "Recette non trouvée" });
-      return;
-    }
+    if (index === -1) { res.status(404).json({ message: "Recette non trouvée" }); return; }
 
     if (recipes[index].authorId !== userId) {
       res.status(403).json({ message: "Vous ne pouvez modifier que vos propres recettes." });
       return;
     }
 
+    const oldVisibility = recipes[index].visibility;
+    const newVisibility = req.body.visibility;
+
+    let updatedReviews = recipes[index].reviews || [];
+    let updatedRating = recipes[index].rating;
+
+    if (oldVisibility === 'public' && newVisibility === 'private') {
+        updatedReviews = [];
+        updatedRating = 0;
+    }
+
     const updatedRecipe = { 
       ...recipes[index], 
       ...req.body, 
       id: id, 
-      authorId: userId
+      authorId: userId,
+      reviews: updatedReviews,
+      rating: updatedRating
     };
 
     recipes[index] = updatedRecipe;
-
     await saveRecipesToFile(recipes);
+    cache.flushAll(); // Important !
+
     res.json(updatedRecipe);
   } catch (error) {
     res.status(500).json({ message: "Erreur serveur" });
@@ -278,6 +287,137 @@ app.post('/api/recettes/:id/favorite', requireAuth, async (req: AuthRequest, res
     await saveUsersToFile(users);
 
     res.json({ favorites: user.favorites });
+  } catch (error) {
+    res.status(500).json({ message: "Erreur serveur" });
+  }
+});
+
+app.post('/api/recettes/:id/reviews', requireAuth, async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+  const { rating, comment } = req.body;
+  const user = req.user!;
+
+  if (!rating || rating < 1 || rating > 5) {
+    res.status(400).json({ message: "Note invalide" });
+    return;
+  }
+
+  try {
+    const recipes = await getRecipesFromFile();
+    const index = recipes.findIndex((r) => r.id === id);
+
+    if (index === -1) {
+        res.status(404).json({ message: "Recette introuvable" });
+        return;
+    }
+
+    const recipe = recipes[index];
+
+    if (recipe.visibility === 'private') {
+        res.status(403).json({ message: "Impossible de commenter une recette privée." });
+        return;
+    }
+
+    if (!recipe.reviews) recipe.reviews = [];
+
+    const existingReviewIndex = recipe.reviews.findIndex(r => r.userId === user.id);
+    if (existingReviewIndex !== -1) {
+        res.status(400).json({ message: "Vous avez déjà noté cette recette. Modifiez votre avis existant." });
+        return;
+    }
+
+    const newReview: Review = {
+      userId: user.id,
+      userName: user.name,
+      rating: Number(rating),
+      comment: comment,
+      createdAt: new Date().toISOString()
+    };
+
+    recipe.reviews.push(newReview);
+
+    const totalStars = recipe.reviews.reduce((acc, r) => acc + r.rating, 0);
+    recipe.rating = parseFloat((totalStars / recipe.reviews.length).toFixed(1));
+
+    recipes[index] = recipe;
+    await saveRecipesToFile(recipes);
+    cache.flushAll();
+
+    res.status(201).json(newReview);
+  } catch (error) {
+    res.status(500).json({ message: "Erreur serveur" });
+  }
+});
+
+app.put('/api/recettes/:id/reviews', requireAuth, async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+  const { rating, comment } = req.body;
+  const user = req.user!;
+
+  try {
+    const recipes = await getRecipesFromFile();
+    const index = recipes.findIndex((r) => r.id === id);
+    if (index === -1) { res.status(404).json({ message: "Recette introuvable" }); return; }
+
+    const recipe = recipes[index];
+    if (!recipe.reviews) recipe.reviews = [];
+
+    const reviewIndex = recipe.reviews.findIndex(r => r.userId === user.id);
+
+    if (reviewIndex === -1) {
+        res.status(404).json({ message: "Avis non trouvé" });
+        return;
+    }
+
+    recipe.reviews[reviewIndex].rating = Number(rating);
+    recipe.reviews[reviewIndex].comment = comment;
+    recipe.reviews[reviewIndex].createdAt = new Date().toISOString(); // On met à jour la date
+
+    const totalStars = recipe.reviews.reduce((acc, r) => acc + r.rating, 0);
+    recipe.rating = parseFloat((totalStars / recipe.reviews.length).toFixed(1));
+
+    recipes[index] = recipe;
+    await saveRecipesToFile(recipes);
+    cache.flushAll();
+
+    res.json(recipe.reviews[reviewIndex]);
+  } catch (error) {
+    res.status(500).json({ message: "Erreur serveur" });
+  }
+});
+
+app.delete('/api/recettes/:id/reviews', requireAuth, async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+  const user = req.user!;
+
+  try {
+    const recipes = await getRecipesFromFile();
+    const index = recipes.findIndex((r) => r.id === id);
+    if (index === -1) { res.status(404).json({ message: "Recette introuvable" }); return; }
+
+    const recipe = recipes[index];
+    if (!recipe.reviews) { res.status(404).json({ message: "Aucun avis" }); return; }
+
+    const initialLength = recipe.reviews.length;
+    recipe.reviews = recipe.reviews.filter(r => r.userId !== user.id);
+
+    if (recipe.reviews.length === initialLength) {
+        res.status(404).json({ message: "Avis non trouvé" });
+        return;
+    }
+
+    if (recipe.reviews.length > 0) {
+        const totalStars = recipe.reviews.reduce((acc, r) => acc + r.rating, 0);
+        recipe.rating = parseFloat((totalStars / recipe.reviews.length).toFixed(1));
+    } else {
+        recipe.rating = 0;
+    }
+
+    recipes[index] = recipe;
+    await saveRecipesToFile(recipes);
+    cache.flushAll();
+
+    res.json({ message: "Avis supprimé" });
   } catch (error) {
     res.status(500).json({ message: "Erreur serveur" });
   }
