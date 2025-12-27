@@ -43,6 +43,14 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+      <div className="absolute top-6 left-6">
+        <Link 
+          href="/" 
+          className="flex items-center gap-2 text-slate-500 hover:text-orange-600 transition-colors font-medium"
+        >
+          ← Retour à l'accueil
+        </Link>
+      </div>
       <div className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md border border-slate-100">
         <h1 className="text-3xl font-bold text-slate-800 mb-6 text-center">Connexion 🔐</h1>
         

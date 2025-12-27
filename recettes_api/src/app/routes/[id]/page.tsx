@@ -84,7 +84,7 @@ export default function RecipePage() {
           className="absolute inset-0 w-full h-full object-cover z-0"
         />
         
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/30"></div>
+        <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/40 to-black/30"></div>
 
         <div className="max-w-4xl mx-auto px-6 h-full flex flex-col justify-end pb-8 relative z-10">
           
@@ -164,7 +164,7 @@ export default function RecipePage() {
               <div className="space-y-6">
                 {recipe.steps.map((step, index) => (
                   <div key={index} className="flex gap-4">
-                    <div className="flex-shrink-0 w-8 h-8 bg-orange-100 text-orange-600 font-bold rounded-full flex items-center justify-center">
+                    <div className="shrink-0 w-8 h-8 bg-orange-100 text-orange-600 font-bold rounded-full flex items-center justify-center">
                       {index + 1}
                     </div>
                     <p className="text-slate-600 leading-relaxed pt-1 text-lg">{step}</p>
