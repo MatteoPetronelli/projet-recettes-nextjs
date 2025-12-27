@@ -30,7 +30,7 @@ export default function SearchBar() {
         value={term}
         onChange={(e) => setTerm(e.target.value)}
       />
-      <p className="text-xs text-gray-400 mt-2 ml-1">
+      <p className="text-xs text-gray-500 mt-2 ml-1">
         La recherche se lance automatiquement...
       </p>
     </div>

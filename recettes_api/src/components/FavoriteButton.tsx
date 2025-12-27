@@ -56,7 +56,7 @@ export default function FavoriteButton({ recipeId, initialIsFavorite, onToggle }
       onClick={handleClick}
       disabled={loading}
       className={`p-2 rounded-full transition-all duration-300 hover:scale-110 shadow-sm ${
-        isFav ? "bg-red-50 text-red-500" : "bg-white/80 text-slate-400 hover:text-red-400"
+        isFav ? "bg-red-50 text-red-600" : "bg-white/80 text-slate-500 hover:text-red-500"
       }`}
     >
       {isFav ? "❤️" : "🤍"}

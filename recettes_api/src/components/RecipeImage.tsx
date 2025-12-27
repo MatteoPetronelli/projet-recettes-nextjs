@@ -1,28 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import Image from "next/image";
 
-interface RecipeImageProps {
-  src?: string;
+interface Props {
+  src: string;
   alt: string;
   className?: string;
+  priority?: boolean;
 }
 
-export default function RecipeImage({ src, alt, className }: RecipeImageProps) {
-  const fallbackImage = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=800&q=80";
-  
-  const [imgSrc, setImgSrc] = useState(src || fallbackImage);
-
+export default function RecipeImage({ src, alt, className, priority = false }: Props) {
   return (
-    <img 
-      src={imgSrc} 
-      alt={alt} 
-      className={className}
-      onError={() => {
-        if (imgSrc !== fallbackImage) {
-          setImgSrc(fallbackImage);
-        }
-      }}
-    />
+    <div className={`relative ${className}`}>
+      <Image
+        src={src}
+        alt={alt}
+        fill
+        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+        className="object-cover"
+        priority={priority}
+      />
+    </div>
   );
 }

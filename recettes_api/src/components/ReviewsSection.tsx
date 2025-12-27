@@ -155,7 +155,7 @@ export default function ReviewsSection({ recipeId, initialReviews, visibility }:
                         {isMyReview && (
                             <div className="flex gap-2 text-sm">
                                 <button onClick={() => startEdit(rev)} className="text-blue-600 hover:underline">Modifier</button>
-                                <button onClick={handleDelete} className="text-red-500 hover:underline">Supprimer</button>
+                                <button onClick={handleDelete} className="text-red-600 hover:underline">Supprimer</button>
                             </div>
                         )}
                     </div>
@@ -176,7 +176,7 @@ export default function ReviewsSection({ recipeId, initialReviews, visibility }:
                     {isEditing ? "Modifier votre avis ✏️" : "Donnez votre avis 📝"}
                 </h4>
                 
-                {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
+                {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
 
                 <div className="mb-4">
                     <label className="block text-sm font-medium text-slate-700 mb-2">Votre note</label>

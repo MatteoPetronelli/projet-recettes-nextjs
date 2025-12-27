@@ -30,7 +30,7 @@ export default function UserHeader() {
         </span>
         <button 
           onClick={handleLogout}
-          className="text-sm text-red-500 hover:text-red-700 underline"
+          className="text-sm text-red-600 hover:text-red-700 underline"
         >
           Se déconnecter
         </button>

@@ -4,214 +4,274 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Recipe } from "@/types/recipe";
 
-interface RecipeFormProps {
+interface Props {
   initialData?: Recipe;
 }
 
-export default function RecipeForm({ initialData }: RecipeFormProps) {
+export default function RecipeForm({ initialData }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const isEditMode = !!initialData;
+  const [error, setError] = useState("");
 
   const [formData, setFormData] = useState({
     name: initialData?.name || "",
-    imageUrl: initialData?.imageUrl || "",
-    country: initialData?.country || "",
-    type: initialData?.type || "Plat",
-    diet: initialData?.diet || "Non-végétarien",
-    visibility: initialData?.visibility || "public",
-    time: initialData?.time || 0,
+    imageKeyword: initialData?.imageUrl ? "keep" : "", 
+    time: initialData?.time || 15,
     difficulty: initialData?.difficulty || 1,
-    ingredientsString: initialData?.ingredients.join('\n') || "",
-    stepsString: initialData?.steps.join('\n') || "",
+    country: initialData?.country || "France",
+    type: initialData?.type || "Plat",
+    diet: initialData?.diet || "Végétarien",
+    visibility: initialData?.visibility || "public",
+    ingredients: initialData?.ingredients || [""],
+    steps: initialData?.steps || [""]
   });
 
-  const [errors, setErrors] = useState<Record<string, string>>({});
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  // --- GESTION DES LISTES ---
+  const handleArrayChange = (
+    field: "ingredients" | "steps",
+    index: number,
+    value: string
+  ) => {
+    const newArray = [...formData[field]];
+    newArray[index] = value;
+    setFormData({ ...formData, [field]: newArray });
   };
 
+  const addField = (field: "ingredients" | "steps") => {
+    setFormData({ ...formData, [field]: [...formData[field], ""] });
+  };
+
+  const removeField = (field: "ingredients" | "steps", index: number) => {
+    const newArray = formData[field].filter((_, i) => i !== index);
+    setFormData({ ...formData, [field]: newArray });
+  };
+
+  // --- SOUMISSION ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setErrors({});
-
-    const payload = {
-      name: formData.name,
-      imageUrl: formData.imageUrl,
-      country: formData.country,
-      type: formData.type,
-      diet: formData.diet,
-      visibility: formData.visibility,
-      time: Number(formData.time),
-      difficulty: Number(formData.difficulty),
-      authorId: "current_user",
-      ingredients: formData.ingredientsString.split('\n').filter(i => i.trim() !== ""),
-      steps: formData.stepsString.split('\n').filter(s => s.trim() !== "")
-    };
+    setError("");
 
     try {
       const token = sessionStorage.getItem("token");
-      const headers: Record<string, string> = { 
-        'Content-Type': 'application/json' 
-      };
+      if (!token) throw new Error("Vous devez être connecté");
 
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      } else {
-        console.error("ATTENTION : Pas de token trouvé dans sessionStorage !");
-        alert("Vous semblez déconnecté. Veuillez vous reconnecter.");
-        router.push('/auth/connexion');
-        return;
-      }
+      const url = initialData 
+        ? `http://127.0.0.1:4000/api/recettes/${initialData.id}`
+        : "http://127.0.0.1:4000/api/recettes";
 
-      const url = isEditMode ? `http://127.0.0.1:4000/api/recettes/${initialData.id}` : 'http://127.0.0.1:4000/api/recettes';
-      const method = isEditMode ? 'PUT' : 'POST';
+      const method = initialData ? "PUT" : "POST";
 
       const res = await fetch(url, {
-        method: method,
-        headers: headers,
-        body: JSON.stringify(payload),
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(formData)
       });
 
-      if (!res.ok) {
-        const errorData = await res.json();
-        
-        if (res.status === 400 && errorData.errors) {
-          const newErrors: Record<string, string> = {};
-          
-          errorData.errors.forEach((err: any) => {
-            newErrors[err.field] = err.message;
-          });
-          
-          setErrors(newErrors);
-          setLoading(false);
-          return;
-        }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Erreur lors de l'enregistrement");
 
-        if (res.status === 401 || res.status === 403) {
-          alert("Session expirée ou droits insuffisants. Veuillez vous reconnecter.");
-          router.push('/auth/connexion');
-          return;
-        }
-        
-        alert("Une erreur est survenue : " + (errorData.message || res.statusText));
-        setLoading(false);
-        return;
-      }
-      router.push(isEditMode ? `/routes/${initialData.id}` : '/'); 
+      router.push("/");
       router.refresh();
-      
-    } catch (error) {
-      console.error("Erreur:", error);
-      alert("Erreur de connexion au serveur");
+
+    } catch (err: any) {
+      setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 bg-white p-6 rounded-lg shadow-md border border-slate-200">
-      <h2 className="text-xl font-semibold mb-4">
-        {isEditMode ? "Modifier la recette ✏️" : "Nouvelle recette 🍳"}
-      </h2>
-
-      {/* Nom et Pays */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-slate-700">Nom</label>
-          <input required name="name" value={formData.name} onChange={handleChange} type="text" className={`w-full border p-2 rounded mt-1 ${errors.name ? 'border-red-500' : 'border-slate-300'}`} />
-          {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
+    <form onSubmit={handleSubmit} className="space-y-8 bg-white p-8 rounded-3xl shadow-xl border border-slate-100">
+      
+      {error && (
+        <div className="bg-red-50 text-red-600 p-4 rounded-xl text-center font-bold">
+            {error}
         </div>
+      )}
+
+      {/* SECTION 1 : INFOS GÉNÉRALES */}
+      <div className="grid md:grid-cols-2 gap-6">
+        <div className="col-span-2">
+            <label htmlFor="name" className="block text-sm font-bold text-slate-700 mb-2">Nom de la recette</label>
+            <input 
+                id="name"
+                className="w-full border border-slate-300 rounded-xl p-4 focus:ring-2 focus:ring-orange-500 outline-none font-medium"
+                placeholder="Ex: Tarte aux pommes"
+                value={formData.name}
+                onChange={e => setFormData({...formData, name: e.target.value})}
+                required
+            />
+        </div>
+
         <div>
-          <label className="block text-sm font-medium text-slate-700">Pays</label>
-          <input required name="country" value={formData.country} onChange={handleChange} type="text" className={`w-full border p-2 rounded mt-1 ${errors.country ? 'border-red-500' : 'border-slate-300'}`} />
-          {errors.country && <p className="text-red-500 text-xs mt-1">{errors.country}</p>}
+            <label htmlFor="country" className="block text-sm font-bold text-slate-700 mb-2">Pays d'origine</label>
+            <input 
+                id="country"
+                className="w-full border border-slate-300 rounded-xl p-4 focus:ring-2 focus:ring-orange-500 outline-none"
+                placeholder="Ex: Italie"
+                value={formData.country}
+                onChange={e => setFormData({...formData, country: e.target.value})}
+                required
+            />
+        </div>
+
+        <div>
+            <label htmlFor="imageKeyword" className="block text-sm font-bold text-slate-700 mb-2">Image (Mot-clé anglais)</label>
+            <input 
+                id="imageKeyword"
+                className="w-full border border-slate-300 rounded-xl p-4 focus:ring-2 focus:ring-orange-500 outline-none"
+                placeholder="Ex: pizza, pasta, cake..."
+                value={formData.imageKeyword === "keep" ? "" : formData.imageKeyword}
+                onChange={e => setFormData({...formData, imageKeyword: e.target.value})}
+                helper-text={initialData ? "Laissez vide pour garder l'image actuelle" : ""}
+            />
         </div>
       </div>
 
-      {/* URL Image */}
-      <div>
-        <label className="block text-sm font-medium text-slate-700">URL de l'image</label>
-        <input 
-          name="imageUrl" 
-          value={formData.imageUrl} 
-          onChange={handleChange} 
-          type="url" 
-          placeholder="https://..." 
-          className={`w-full border p-2 rounded mt-1 ${errors.imageUrl ? 'border-red-500' : 'border-slate-300'}`} 
-        />
-        {errors.imageUrl && <p className="text-red-500 text-xs mt-1">{errors.imageUrl}</p>}
-      </div>
-
-      {/* SELECTEURS : Type, Diet, Visibilité, Difficulté */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {/* SECTION 2 : SLIDERS & SELECTS */}
+      <div className="grid md:grid-cols-3 gap-6 bg-slate-50 p-6 rounded-2xl">
         <div>
-          <label className="block text-sm font-medium text-slate-700">Type</label>
-          <select name="type" value={formData.type} onChange={handleChange} className="w-full border border-slate-300 p-2 rounded mt-1">
-            <option>Entrée</option>
-            <option>Plat</option>
-            <option>Dessert</option>
-          </select>
+            <label htmlFor="time" className="block text-sm font-bold text-slate-700 mb-2">Temps : {formData.time} min</label>
+            <input 
+                id="time"
+                type="range" 
+                min="5" max="180" step="5"
+                className="w-full accent-orange-600 cursor-pointer"
+                value={formData.time}
+                onChange={e => setFormData({...formData, time: Number(e.target.value)})}
+            />
         </div>
+
         <div>
-          <label className="block text-sm font-medium text-slate-700">Régime</label>
-          <select name="diet" value={formData.diet} onChange={handleChange} className="w-full border border-slate-300 p-2 rounded mt-1">
-            <option>Non-végétarien</option>
-            <option>Végétarien</option>
-            <option>Vegan</option>
-          </select>
+            <label htmlFor="difficulty" className="block text-sm font-bold text-slate-700 mb-2">Difficulté : {formData.difficulty}/5</label>
+            <input 
+                id="difficulty"
+                type="range" 
+                min="1" max="5" 
+                className="w-full accent-orange-600 cursor-pointer"
+                value={formData.difficulty}
+                onChange={e => setFormData({...formData, difficulty: Number(e.target.value)})}
+            />
+        </div>
+
+        <div>
+            <label htmlFor="type" className="block text-sm font-bold text-slate-700 mb-2">Type de plat</label>
+            <select 
+                id="type"
+                className="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-orange-500 outline-none bg-white"
+                value={formData.type}
+                onChange={e => setFormData({...formData, type: e.target.value})}
+            >
+                <option value="Entrée">🥗 Entrée</option>
+                <option value="Plat">🥘 Plat</option>
+                <option value="Dessert">🍰 Dessert</option>
+            </select>
         </div>
         
-        {/* 3. NOUVEAU SELECTEUR DE VISIBILITÉ */}
         <div>
-          <label className="block text-sm font-medium text-slate-700">Visibilité</label>
-          <select 
-            name="visibility" 
-            value={formData.visibility} 
-            onChange={handleChange} 
-            className="w-full border border-slate-300 p-2 rounded mt-1 bg-slate-50 font-medium"
-          >
-            <option value="public">🌍 Publique</option>
-            <option value="private">🔒 Privée</option>
-          </select>
+            <label htmlFor="diet" className="block text-sm font-bold text-slate-700 mb-2">Régime</label>
+            <select 
+                id="diet"
+                className="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-orange-500 outline-none bg-white"
+                value={formData.diet}
+                onChange={e => setFormData({...formData, diet: e.target.value})}
+            >
+                <option value="Végétarien">🌿 Végétarien</option>
+                <option value="Vegan">🌱 Vegan</option>
+                <option value="Carné">🥩 Carné</option>
+                <option value="Sans Gluten">🌾 Sans Gluten</option>
+            </select>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700">Difficulté</label>
-          <input required name="difficulty" value={formData.difficulty} onChange={handleChange} type="number" min="1" max="5" className={`w-full border p-2 rounded mt-1 ${errors.difficulty ? 'border-red-500' : 'border-slate-300'}`} />
-          {errors.difficulty && <p className="text-red-500 text-xs mt-1">{errors.difficulty}</p>}
+            <label htmlFor="visibility" className="block text-sm font-bold text-slate-700 mb-2">Visibilité</label>
+            <select 
+                id="visibility"
+                className="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-orange-500 outline-none bg-white"
+                value={formData.visibility}
+                onChange={e => setFormData({...formData, visibility: e.target.value as 'public' | 'private'})}
+            >
+                <option value="public">🌍 Public (Visible par tous)</option>
+                <option value="private">🔒 Privé (Visible par moi seul)</option>
+            </select>
         </div>
       </div>
 
-      {/* Temps */}
+      {/* SECTION 3 : LISTES DYNAMIQUES (LA CORRECTION EST ICI) */}
+      
+      {/* Ingrédients */}
       <div>
-        <label className="block text-sm font-medium text-slate-700">Temps (min)</label>
-        <input required name="time" value={formData.time} onChange={handleChange} type="number" className={`w-full border p-2 rounded mt-1 ${errors.time ? 'border-red-500' : 'border-slate-300'}`} />
-        {errors.time && <p className="text-red-500 text-xs mt-1">{errors.time}</p>}
+        <h2 className="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
+            🥕 Ingrédients
+        </h2>
+        {formData.ingredients.map((ing, index) => (
+            <div key={index} className="flex gap-2 mb-2">
+                <input 
+                    value={ing}
+                    onChange={(e) => handleArrayChange("ingredients", index, e.target.value)}
+                    placeholder="Ex: 200g de farine"
+                    className="flex-1 border border-slate-300 rounded-lg p-3 outline-none focus:border-orange-500"
+                    aria-label={`Ingrédient ${index + 1}`} 
+                />
+                <button 
+                    type="button" 
+                    onClick={() => removeField("ingredients", index)}
+                    className="text-red-500 hover:bg-red-50 p-3 rounded-lg font-bold"
+                    aria-label={`Supprimer l'ingrédient ${index + 1}`}
+                >
+                    ✕
+                </button>
+            </div>
+        ))}
+        <button type="button" onClick={() => addField("ingredients")} className="text-orange-600 font-bold text-sm hover:underline mt-1">
+            + Ajouter un ingrédient
+        </button>
       </div>
 
-      {/* Text Areas */}
+      {/* Étapes */}
       <div>
-        <label className="block text-sm font-medium text-slate-700">Ingrédients (un par ligne)</label>
-        <textarea required name="ingredientsString" value={formData.ingredientsString} onChange={handleChange} rows={4} className="w-full border border-slate-300 p-2 rounded mt-1"></textarea>
+        <h2 className="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
+            🔥 Étapes
+        </h2>
+        {formData.steps.map((step, index) => (
+            <div key={index} className="flex gap-2 mb-2">
+                <textarea 
+                    value={step}
+                    onChange={(e) => handleArrayChange("steps", index, e.target.value)}
+                    placeholder={`Étape ${index + 1}`}
+                    rows={2}
+                    className="flex-1 border border-slate-300 rounded-lg p-3 outline-none focus:border-orange-500 resize-none"
+                    aria-label={`Étape de préparation ${index + 1}`}
+                />
+                <button 
+                    type="button" 
+                    onClick={() => removeField("steps", index)}
+                    className="text-red-500 hover:bg-red-50 p-3 rounded-lg font-bold h-fit"
+                    aria-label={`Supprimer l'étape ${index + 1}`}
+                >
+                    ✕
+                </button>
+            </div>
+        ))}
+        <button type="button" onClick={() => addField("steps")} className="text-orange-600 font-bold text-sm hover:underline mt-1">
+            + Ajouter une étape
+        </button>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-slate-700">Étapes (une par ligne)</label>
-        <textarea required name="stepsString" value={formData.stepsString} onChange={handleChange} rows={4} className="w-full border border-slate-300 p-2 rounded mt-1"></textarea>
+      {/* SUBMIT */}
+      <div className="pt-6 border-t">
+        <button 
+            type="submit" 
+            disabled={loading}
+            className="w-full bg-orange-600 hover:bg-orange-700 text-white font-extrabold text-xl py-4 rounded-xl shadow-lg hover:shadow-orange-200/50 transition-all transform hover:-translate-y-1"
+        >
+            {loading ? "Mijotage en cours..." : (initialData ? "Sauvegarder les modifications" : "Créer la recette 👨‍🍳")}
+        </button>
       </div>
-
-      <button 
-        type="submit" 
-        disabled={loading}
-        className={`w-full text-white py-3 rounded font-bold transition disabled:bg-gray-400 ${
-            isEditMode ? "bg-blue-600 hover:bg-blue-700" : "bg-green-600 hover:bg-green-700"
-        }`}
-      >
-        {loading ? "Sauvegarde..." : (isEditMode ? "Enregistrer les modifications" : "Créer la recette")}
-      </button>
     </form>
   );
 }

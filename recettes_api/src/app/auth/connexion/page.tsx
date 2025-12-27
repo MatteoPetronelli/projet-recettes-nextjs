@@ -24,16 +24,13 @@ export default function LoginPage() {
 
       const data = await res.json();
 
-      if (!res.ok) {
-        throw new Error(data.message || "Erreur de connexion");
-      }
+      if (!res.ok) throw new Error(data.message || "Erreur de connexion");
 
       sessionStorage.setItem("token", data.token);
       sessionStorage.setItem("user", JSON.stringify(data.user));
 
-      alert(`Bienvenue ${data.user.name} !`);
       router.push("/");
-      
+      router.refresh();
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -42,57 +39,65 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+    <main className="min-h-screen flex items-center justify-center bg-slate-50 p-4 relative">
+        
       <div className="absolute top-6 left-6">
         <Link 
-          href="/" 
-          className="flex items-center gap-2 text-slate-500 hover:text-orange-600 transition-colors font-medium"
+            href="/" 
+            className="flex items-center gap-2 text-slate-500 hover:text-orange-600 transition-colors font-medium"
         >
-          ← Retour à l'accueil
+            ← Retour à l'accueil
         </Link>
       </div>
-      <div className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md border border-slate-100">
-        <h1 className="text-3xl font-bold text-slate-800 mb-6 text-center">Connexion 🔐</h1>
+
+      <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-slate-100">
+        <h1 className="text-3xl font-extrabold text-slate-800 mb-6 text-center">Connexion</h1>
         
+        {error && <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm font-medium">{error}</div>}
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-600 mb-1">Email</label>
-            <input 
-              type="email" 
+            <label htmlFor="email" className="block text-sm font-bold text-slate-700 mb-1">Email</label>
+            <input
+              id="email"
+              name="email"
+              type="email"
               required
-              className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              className="w-full border border-slate-300 rounded-lg p-3 focus:ring-2 focus:ring-orange-500 outline-none transition"
+              placeholder="votre@email.com"
               value={formData.email}
-              onChange={(e) => setFormData({...formData, email: e.target.value})}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
             />
           </div>
-
+          
           <div>
-            <label className="block text-sm font-medium text-slate-600 mb-1">Mot de passe</label>
-            <input 
-              type="password" 
+            <label htmlFor="password" className="block text-sm font-bold text-slate-700 mb-1">Mot de passe</label>
+            <input
+              id="password"
+              name="password"
+              type="password"
               required
-              className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              className="w-full border border-slate-300 rounded-lg p-3 focus:ring-2 focus:ring-orange-500 outline-none transition"
+              placeholder="••••••••"
               value={formData.password}
-              onChange={(e) => setFormData({...formData, password: e.target.value})}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
             />
           </div>
 
-          {error && <p className="text-red-500 text-sm text-center bg-red-50 p-2 rounded">{error}</p>}
-
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition disabled:opacity-50"
+            className="w-full bg-orange-600 text-white font-bold py-3 rounded-lg hover:bg-orange-700 transition disabled:opacity-50"
           >
-            {loading ? "Connexion..." : "Se connecter"}
+            {loading ? "Chargement..." : "Se connecter"}
           </button>
         </form>
 
-        <p className="mt-6 text-center text-slate-500 text-sm">
+        <p className="mt-4 text-center text-slate-600">
           Pas encore de compte ?{" "}
-          <Link href="/auth/inscription" className="text-blue-600 font-semibold hover:underline">
+          <a href="/auth/inscription" className="text-orange-600 font-bold hover:underline">
             S'inscrire
-          </Link>
+          </a>
         </p>
       </div>
     </main>
