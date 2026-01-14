@@ -1,6 +1,6 @@
-
 "use client";
 
+import { Suspense } from "react"; 
 import SearchBar from "@/components/SearchBar";
 import FilterTabs from "@/components/FilterTabs";
 import UserHeader from "@/components/UserHeader";
@@ -22,10 +22,14 @@ export default function Header() {
           </div>
           <div className="pb-4 pt-2 flex flex-col md:flex-row gap-4 md:items-center justify-between">
             <div className="w-full md:w-1/2 lg:w-1/3">
-              <SearchBar />
+              <Suspense fallback={<div className="h-10 bg-slate-100 rounded-lg animate-pulse" />}>
+                <SearchBar />
+              </Suspense>
             </div>
             <div className="overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
-              <FilterTabs />
+              <Suspense fallback={<div className="h-8 w-20 bg-slate-100 rounded-full animate-pulse" />}>
+                <FilterTabs />
+              </Suspense>
             </div>
           </div>
         </div>
