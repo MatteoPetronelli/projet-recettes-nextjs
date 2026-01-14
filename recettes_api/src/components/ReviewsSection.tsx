@@ -7,7 +7,7 @@ import { Review } from "@/types/recipe";
 interface Props {
   recipeId: string;
   initialReviews: Review[];
-  visibility: 'public' | 'private'; // On a besoin de savoir si c'est privé
+  visibility: 'public' | 'private';
 }
 
 export default function ReviewsSection({ recipeId, initialReviews, visibility }: Props) {
@@ -118,7 +118,6 @@ export default function ReviewsSection({ recipeId, initialReviews, visibility }:
       setRating(review.rating);
       setComment(review.comment);
       setIsEditing(true);
-      // Scroll vers le formulaire (simple astuce UX)
       document.getElementById('review-form')?.scrollIntoView({ behavior: 'smooth' });
   };
 
