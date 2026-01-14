@@ -137,7 +137,6 @@ export default function RecipePage() {
           </div>
         </div>
       </div>
-      {/* --- FIN DU HEADER --- */}
 
 
       {/* CONTENU PRINCIPAL */}

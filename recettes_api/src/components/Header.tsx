@@ -1,12 +1,13 @@
 
 "use client";
+
 import SearchBar from "@/components/SearchBar";
 import FilterTabs from "@/components/FilterTabs";
 import UserHeader from "@/components/UserHeader";
 
 export default function Header() {
   return (
-     <div className="sticky top-0 z-40 w-full backdrop-blur-xl bg-white/80 border-b border-slate-200/60 shadow-sm transition-all duration-300">
+    <header className="sticky top-0 z-40 w-full backdrop-blur-xl bg-white/80 border-b border-slate-200/60 shadow-sm transition-all duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex-shrink-0 cursor-pointer group" onClick={() => window.scrollTo({top:0, behavior:'smooth'})}>
@@ -28,6 +29,6 @@ export default function Header() {
             </div>
           </div>
         </div>
-      </div>
+    </header>
   );
 }

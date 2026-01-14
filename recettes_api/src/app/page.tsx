@@ -4,9 +4,7 @@ import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Recipe } from "@/types/recipe";
-
 import RecipeImage from "@/components/RecipeImage";
-
 import FavoriteButton from "@/components/FavoriteButton";
 
 // --- 1. COMPOSANT CARTE ---
@@ -115,11 +113,21 @@ function HomeContent() {
       const user = JSON.parse(userStr);
       setCurrentUserId(user.id);
       setFavorites(user.favorites || []);
+    } else {
+      setCurrentUserId(null);
+      setFavorites([]);
     }
   };
 
   useEffect(() => {
     refreshData();
+    const handleAuthChange = () => {
+       refreshData();
+       fetchRecipes(); 
+    };
+
+    window.addEventListener("auth-change", handleAuthChange);
+
     const fetchRecipes = async () => {
       setLoading(true);
       const params = new URLSearchParams();
@@ -139,7 +147,7 @@ function HomeContent() {
         if (res.status === 403) {
             sessionStorage.removeItem("token");
             sessionStorage.removeItem("user");
-            window.location.reload();
+            window.dispatchEvent(new Event("auth-change"));
             return;
         }
         
@@ -153,7 +161,12 @@ function HomeContent() {
         setLoading(false);
       }
     };
+
     fetchRecipes();
+
+    return () => {
+      window.removeEventListener("auth-change", handleAuthChange);
+    };
   }, [q, type]);
 
   // --- FILTRES ---
@@ -189,7 +202,6 @@ function HomeContent() {
   return (
     <main className="min-h-screen pb-20">
       {/* GRILLES */}
-      {/* affichage des recettes selon si on est connecté ou pas */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 animate-pulse">
@@ -200,22 +212,22 @@ function HomeContent() {
           <div className="text-center py-20 bg-white/50 rounded-3xl border border-dashed border-slate-300 mx-auto max-w-2xl animate-fade-in">
             <p className="text-4xl mb-4">🥗</p>
             <p className="text-xl text-slate-600 font-bold">Aucune recette trouvée</p>
-            <p className="text-slate-500">Essayez d'autres mots-clés !</p>
+            <p className="text-slate-400">Essayez d'autres mots-clés !</p>
           </div>
         ) : (
           <>
             {currentUserId ? (
-              // MODE CONNECTÉ : Affichage par sections
+              // MODE CONNECTÉ
               <>
                 <RecipeSection title="Mes Recettes" icon="👨‍🍳" list={myRecipes} />
                 <RecipeSection title="Mes Favoris" icon="❤️" list={favRecipes} />
                 {(myRecipes.length > 0 || favRecipes.length > 0) && (
-                   <div className="border-t border-slate-200/60 my-10"></div>
+                    <div className="border-t border-slate-200/60 my-10"></div>
                 )}
                 <RecipeSection title="Communauté" icon="🌍" list={communityRecipes} />
               </>
             ) : (
-              // MODE VISITEUR : Tout le monde ensemble
+              // MODE VISITEUR
               <RecipeSection title="Recettes de la communauté" icon="🌍" list={recipes} />
             )}
           </>
