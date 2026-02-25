@@ -27,7 +27,7 @@ export interface Recipe {
   createdAt: string;
 }
 
-const dbPath = path.join(__dirname, 'data', 'recipes.json');
+const dbPath = path.join(process.cwd(), 'data', 'recipes.json');
 
 export async function getRecipesFromFile(): Promise<Recipe[]> {
   try {

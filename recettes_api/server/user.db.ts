@@ -9,7 +9,7 @@ export interface User {
   favorites: string[];
 }
 
-const dbPath = path.join(__dirname, 'data', 'users.json');
+const dbPath = path.join(process.cwd(), 'data', 'users.json');
 
 export async function getUsersFromFile(): Promise<User[]> {
   try {
