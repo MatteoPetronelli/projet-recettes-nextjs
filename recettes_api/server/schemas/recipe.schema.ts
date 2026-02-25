@@ -1,24 +1,11 @@
 import { z } from 'zod';
 
-
 export const RecipeSchema = z.object({
   name: z.string().min(3, "Le nom doit faire au moins 3 caractères"),
-  imageUrl: z.string()
-    .url("L'URL est invalide")
-    .startsWith("https://", "L'image doit être sécurisée (HTTPS)")
-    .refine((url) => {
-      if (!url) return true;
-      
-      const cleanUrl = url.split('?')[0].toLowerCase();
-      const hasImageExt = /\.(jpg|jpeg|png|webp|avif|gif|svg)$/.test(cleanUrl);
-      
-      const isUnsplashPhoto = url.includes("images.unsplash.com/photo-");
-
-      return hasImageExt || isUnsplashPhoto;
-    }, { 
-      message: "L'URL doit être une image directe (.jpg, .png) ou un lien Unsplash valide." 
-    })
-    .or(z.literal("")),
+  imageUrl: z.string().refine((url) => {
+    if (!url) return true;
+    return url.startsWith("http://") || url.startsWith("https://") || url.startsWith("/uploads/");
+  }, { message: "L'URL de l'image est invalide" }).or(z.literal("")),
   country: z.string().min(2, "Le pays est requis"),
   type: z.enum(["Entrée", "Plat", "Dessert"] as const, {
     message: "Le type doit être Entrée, Plat ou Dessert",

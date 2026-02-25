@@ -1,25 +1,19 @@
-"use client";
+import Image, { ImageProps } from 'next/image';
 
-import Image from "next/image";
-
-interface Props {
+interface RecipeImageProps extends Omit<ImageProps, 'src'> {
   src: string;
-  alt: string;
-  className?: string;
-  priority?: boolean;
 }
 
-export default function RecipeImage({ src, alt, className, priority = false }: Props) {
+export default function RecipeImage({ src, alt, ...props }: RecipeImageProps) {
+  const isLocalhost = src.includes('127.0.0.1') || src.includes('localhost');
+
   return (
-    <div className={`relative ${className}`}>
-      <Image
-        src={src}
-        alt={alt}
-        fill
-        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-        className="object-cover"
-        priority={priority}
-      />
-    </div>
+    <Image
+      src={src}
+      alt={alt || "Image de recette"}
+      unoptimized={isLocalhost}
+      fill
+      {...props}
+    />
   );
 }

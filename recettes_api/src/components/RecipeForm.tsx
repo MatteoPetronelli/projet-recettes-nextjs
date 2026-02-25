@@ -12,6 +12,7 @@ export default function RecipeForm({ initialData }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
 
   const [formData, setFormData] = useState({
     name: initialData?.name || "",
@@ -56,11 +57,47 @@ export default function RecipeForm({ initialData }: Props) {
       const token = sessionStorage.getItem("token");
       if (!token) throw new Error("Vous devez être connecté");
 
+      let finalImageUrl = formData.imageKeyword === "keep" ? (initialData?.imageUrl || "") : formData.imageKeyword;
+
+      if (imageFile) {
+        const fileData = new FormData();
+        fileData.append("image", imageFile);
+
+        const uploadRes = await fetch("http://127.0.0.1:4000/api/upload", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`
+          },
+          body: fileData
+        });
+
+        if (!uploadRes.ok) {
+          const errData = await uploadRes.json();
+          throw new Error(errData.message || "Erreur lors de l'upload de l'image");
+        }
+
+        const uploadData = await uploadRes.json();
+        finalImageUrl = uploadData.imageUrl;
+      }
+
       const url = initialData 
         ? `http://127.0.0.1:4000/api/recettes/${initialData.id}`
         : "http://127.0.0.1:4000/api/recettes";
 
       const method = initialData ? "PUT" : "POST";
+
+      const payload = {
+        name: formData.name,
+        country: formData.country,
+        type: formData.type,
+        diet: formData.diet,
+        time: formData.time,
+        difficulty: formData.difficulty,
+        visibility: formData.visibility,
+        ingredients: formData.ingredients,
+        steps: formData.steps,
+        imageUrl: finalImageUrl
+      };
 
       const res = await fetch(url, {
         method,
@@ -68,11 +105,15 @@ export default function RecipeForm({ initialData }: Props) {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(payload)
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Erreur lors de l'enregistrement");
+      
+      if (!res.ok) {
+         const detailedErrors = data.errors ? data.errors.map((e: any) => e.message).join(' | ') : data.message;
+         throw new Error(detailedErrors || "Erreur lors de l'enregistrement");
+      }
 
       router.push("/");
       router.refresh();
@@ -120,15 +161,35 @@ export default function RecipeForm({ initialData }: Props) {
         </div>
 
         <div>
-            <label htmlFor="imageKeyword" className="block text-sm font-bold text-slate-700 mb-2">Image (Mot-clé anglais)</label>
-            <input 
-                id="imageKeyword"
-                className="w-full border border-slate-300 rounded-xl p-4 focus:ring-2 focus:ring-orange-500 outline-none"
-                placeholder="Ex: pizza, pasta, cake..."
-                value={formData.imageKeyword === "keep" ? "" : formData.imageKeyword}
-                onChange={e => setFormData({...formData, imageKeyword: e.target.value})}
-                helper-text={initialData ? "Laissez vide pour garder l'image actuelle" : ""}
-            />
+            <label className="block text-sm font-bold text-slate-700 mb-2">Image de la recette</label>
+            <div className="flex flex-col gap-3">
+              <input 
+                  type="file"
+                  accept="image/png, image/jpeg, image/webp"
+                  className="w-full border border-slate-300 rounded-xl p-3 focus:ring-2 focus:ring-orange-500 outline-none bg-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 transition"
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      setImageFile(e.target.files[0]);
+                      setFormData({...formData, imageKeyword: ""});
+                    }
+                  }}
+              />
+              <p className="text-xs text-slate-500 font-medium">Ou utilisez une URL externe :</p>
+              <input 
+                  id="imageKeyword"
+                  className="w-full border border-slate-300 rounded-xl p-4 focus:ring-2 focus:ring-orange-500 outline-none text-sm"
+                  placeholder="https://images.unsplash.com/..."
+                  value={formData.imageKeyword === "keep" ? "" : formData.imageKeyword}
+                  onChange={e => {
+                    setFormData({...formData, imageKeyword: e.target.value});
+                    setImageFile(null); 
+                  }}
+                  disabled={!!imageFile}
+              />
+              {initialData && formData.imageKeyword === "keep" && !imageFile && (
+                <p className="text-xs text-orange-600 font-bold">L'image actuelle sera conservée.</p>
+              )}
+            </div>
         </div>
       </div>
 
