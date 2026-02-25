@@ -24,6 +24,16 @@ app.use(helmet({
 }));
 app.use(cors());
 app.use(express.json());
+
+app.get('/', (req, res) => {
+  res.json({
+    name: "API de Recettes",
+    status: "running",
+    version: "1.0.0",
+    message: "Bienvenue sur l'API ! Le serveur est en ligne. 🚀"
+  });
+});
+
 app.use('/api/', apiLimiter);
 
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
