@@ -1,3 +1,10 @@
 {
-  "ignore": ["data/*", "recipes.json"]
+  "watch": ["."],
+  "ext": "ts",
+  "ignore": [
+    "node_modules",
+    "data/*.json",
+    "uploads/*"
+  ],
+  "exec": "ts-node ./server.ts"
 }
