@@ -56,7 +56,7 @@ export default function UserHeader() {
             Se déconnecter
         </button>
         <Link 
-            href="/routes/creation"
+            href="/routes/ajouter"
             className="bg-orange-600 hover:bg-orange-700 text-white px-5 py-2 rounded-full font-bold transition shadow-sm hover:shadow-orange-200"
         >
             + Créer
